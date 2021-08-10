@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+  <style type="text/css">
+
+      html, body{
+        margin:0;
+        padding:0;
+      }
+      .output_canvas {
+            -moz-transform: scaleX(-1);
+            -o-transform: scaleX(-1);
+            -webkit-transform: scaleX(-1);
+            transform: scaleX(-1);
+        }
+
+      .input_video{
+          display: none;
+        }
+
+</style>
+</head>
+
+<body>
+  <div style="display:none;">
+  <img id="source"
+       src="./flowerHand.png"
+       width="346" height="309">
+</div>
+  <div class="container">
+    <video class="input_video"></video>
+    <canvas class="output_canvas" width="1280px" height="720px"></canvas>
+  </div>
+</body>
+</html>
+
+<script type="module">
+let rIndx01, rIndy01, rIndx02, rIndy02, dataSet;
+const videoElement = document.getElementsByClassName('input_video')[0];
+const canvasElement = document.getElementsByClassName('output_canvas')[0];
+canvasElement.width = window.innerWidth;
+canvasElement.height = canvasElement.width/16*9;
+const canW = canvasElement.width;
+const canH = canvasElement.height;
+const canvasCtx = canvasElement.getContext('2d');
+const image = document.getElementById('source');
+//do the positioning in 0 - 1
+//left = 1 right = 0
+//this needs to be flipped when 1 needs to be 0
+//when 0 needs to be one
+//check how we do bellow
+
+
+let xOffset = 178/canW;
+let yOffset = 154.5/canH;
+let flowerPosition = {x:getRandomBetween(0+xOffset,1-xOffset),y:getRandomBetween(0+yOffset,1-yOffset)}
+let flowerCentre = {x:flowerPosition.x+xOffset, y:flowerPosition.y+yOffset}
+
+
+
+function onResults(results) {
+
+  canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+  canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+  //loop through hands and check to see if any hand point
+  //is inside a rectangular space
+
+  if (results.multiHandLandmarks) {
+
+
+    //   if(results.multiHandedness[0].label == "Left"){
+    //       dataSet = 0;
+    //     } else {
+    //       if(results.multiHandLandmarks.length > 1){
+    //         dataSet = 1;
+    //       }
+    //     }
+    //
+    // rIndx01 = results.multiHandLandmarks[dataSet][8].x * canW;
+    // rIndy01 = results.multiHandLandmarks[dataSet][8].y * canH;
+    // rIndx02 = results.multiHandLandmarks[dataSet][7].x * canW;
+    // rIndy02 = results.multiHandLandmarks[dataSet][7].y * canH;
+
+    //this is a handy line:
+    //----
+    //results.multiHandedness[0].label == "Left"
+    //----
+    //it checks to see if the hand is left or right
+    //[0] is the first hand or last hand standing on hand exit
+    //this will flip about on hand entry and exit
+
+    //loops through each hand
+    for (const landmarks of results.multiHandLandmarks) {
+      //loops through each marker in a hand
+      let counter = 0;
+      for(const indivMarkers of landmarks){
+        counter++;
+        //indivMarkers.x indivMarkers.y
+        //these are the x y coords in a hand
+        //1 = far left 0 = far right (flipped for camera flip)
+
+        //use these to check if in an area
+        //check to measure dist between flowerCentre.x + y
+        //and marker x and y
+        //if it is less than 160 then run function to change position
+        let q = (flowerCentre.x-1)*-1;
+        let a = q - indivMarkers.x;
+        let b = flowerCentre.y - indivMarkers.y;
+        let c = Math.hypot(a,b);
+        if(c< 0.06) repositionFlower();
+        //if(counter == 1) console.log(c);
+
+      }
+      counter=0;
+      // drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS,
+      //                {color: '#00FF00', lineWidth: 5});
+      // drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
+    }
+  }
+  var p1 = {
+	    x: rIndx01,
+	    y: rIndy01
+    };
+
+  var p2 = {
+	   x: rIndx02,
+	   y: rIndy02
+   };
+
+  // angle in radians
+  var angleRadians = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+  // angle in degrees
+  var angleDeg = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+
+  var directionText;
+  if(angleDeg < 140 && angleDeg > 60){
+    directionText = 'up';
+  } else if(angleDeg > 160 || angleDeg < -140) {
+    directionText = 'left';
+  } else if(angleDeg > -100 && angleDeg < -70){
+    directionText = 'down';
+  } else {
+    directionText ='';
+  }
+
+  canvasCtx.font = '150px serif';
+  canvasCtx.save();
+  //anything not following tracking coordinates goes here
+  canvasCtx.scale(-1,1);
+  canvasCtx.translate(-1*canvasElement.width,0);
+  let drawFlowerX = flowerPosition.x*canvasElement.width;
+  let drawFlowerY = flowerPosition.y*canvasElement.height;
+  canvasCtx.drawImage(image, drawFlowerX, drawFlowerY);
+  canvasCtx.restore();
+}
+
+const hands = new Hands({locateFile: (file) => {
+  return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+}});
+hands.setOptions({
+  maxNumHands: 2,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
+hands.onResults(onResults);
+
+const camera = new Camera(videoElement, { onFrame: async () => { await
+hands.send({image: videoElement}); }, width: 1280, height: 720 });
+camera.start();
+
+function repositionFlower(){
+  xOffset = 178/canW;
+  yOffset = 154.5/canH;
+  flowerPosition = {x:getRandomBetween(0+xOffset,1-xOffset),y:getRandomBetween(0+yOffset,1-(yOffset+0.1))}
+  flowerCentre = {x:flowerPosition.x+xOffset, y:flowerPosition.y+yOffset}
+
+}
+
+function getRandomBetween(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+</script>
