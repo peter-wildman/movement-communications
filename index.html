@@ -23,7 +23,42 @@
           display: none;
         }
 
+      #textualInput{
+        z-index:1000;
+        position:absolute;
+        left:100px;
+        top:100px;
+        display: none;
+      }
+
+      #pasteArea{
+        z-index:1000;
+        position:absolute;
+        left:750px;
+        top:100px;
+      }
+
+      #pasteArea{
+        font-size: 4em;
+        color: pink;
+      }
+
+      #flowerText{
+        text-indent: 0px;
+      }
+
+
 </style>
+
+<script type="text/javascript">
+function textAdded(){
+  let p = document.createElement("p");
+  let boxText = document.getElementById("flowerText").value;
+  p.innerHTML = boxText;
+  document.getElementById("pasteArea").appendChild(p);
+}
+</script>
+
 </head>
 
 <body>
@@ -31,15 +66,26 @@
   <img id="source"
        src="./flowerHand.png"
        width="346" height="309">
-</div>
+  </div>
   <div class="container">
+    <form id="textualInput">
+      <textarea id="flowerText" rows="4" cols="50"></textarea>
+      <br><br>
+      <button type="button" onclick="textAdded()">Add Flower Mover Words</button>
+    </form>
+    <div id="pasteArea">
+
+    </div>
     <video class="input_video"></video>
     <canvas class="output_canvas" width="1280px" height="720px"></canvas>
+
   </div>
 </body>
 </html>
 
 <script type="module">
+
+
 let rIndx01, rIndy01, rIndx02, rIndy02, dataSet;
 const videoElement = document.getElementsByClassName('input_video')[0];
 const canvasElement = document.getElementsByClassName('output_canvas')[0];
@@ -71,21 +117,6 @@ function onResults(results) {
   //is inside a rectangular space
 
   if (results.multiHandLandmarks) {
-
-
-    //   if(results.multiHandedness[0].label == "Left"){
-    //       dataSet = 0;
-    //     } else {
-    //       if(results.multiHandLandmarks.length > 1){
-    //         dataSet = 1;
-    //       }
-    //     }
-    //
-    // rIndx01 = results.multiHandLandmarks[dataSet][8].x * canW;
-    // rIndy01 = results.multiHandLandmarks[dataSet][8].y * canH;
-    // rIndx02 = results.multiHandLandmarks[dataSet][7].x * canW;
-    // rIndy02 = results.multiHandLandmarks[dataSet][7].y * canH;
-
     //this is a handy line:
     //----
     //results.multiHandedness[0].label == "Left"
@@ -122,31 +153,6 @@ function onResults(results) {
       // drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
     }
   }
-  var p1 = {
-	    x: rIndx01,
-	    y: rIndy01
-    };
-
-  var p2 = {
-	   x: rIndx02,
-	   y: rIndy02
-   };
-
-  // angle in radians
-  var angleRadians = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-  // angle in degrees
-  var angleDeg = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
-
-  var directionText;
-  if(angleDeg < 140 && angleDeg > 60){
-    directionText = 'up';
-  } else if(angleDeg > 160 || angleDeg < -140) {
-    directionText = 'left';
-  } else if(angleDeg > -100 && angleDeg < -70){
-    directionText = 'down';
-  } else {
-    directionText ='';
-  }
 
   canvasCtx.font = '150px serif';
   canvasCtx.save();
@@ -173,11 +179,20 @@ const camera = new Camera(videoElement, { onFrame: async () => { await
 hands.send({image: videoElement}); }, width: 1280, height: 720 });
 camera.start();
 
+let repositionCount = 0;
+let revealTextBoxCount = 5;
+
 function repositionFlower(){
   xOffset = 178/canW;
   yOffset = 154.5/canH;
   flowerPosition = {x:getRandomBetween(0+xOffset,1-xOffset),y:getRandomBetween(0+yOffset,1-(yOffset+0.1))}
   flowerCentre = {x:flowerPosition.x+xOffset, y:flowerPosition.y+yOffset}
+  if(repositionCount < revealTextBoxCount){
+    repositionCount++;
+  } else{
+    //trigger text box reveal
+    document.getElementById("textualInput").style.display = "block";
+  }
 
 }
 
